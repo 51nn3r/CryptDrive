@@ -1,0 +1,10 @@
+# Игнорируем резервную копию cryptdrive
+../cryptdrive.bak/
+.docker-compose.yml.swp
+.env
+.idea/
+db.sqlite3
+test/
+../spec
+**/__pycache__/
+**/*.pyc
