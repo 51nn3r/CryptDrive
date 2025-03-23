@@ -1,17 +1,9 @@
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-class User(models.Model):
-    is_admin = models.BooleanField(default=False)
-    username = models.CharField(max_length=150, unique=True)
-    password_hash = models.CharField(max_length=255)
+class User(AbstractUser):
     public_key = models.TextField(blank=True)
-
-    ROLE_CHOICES = (
-        ('admin', 'Admin'),
-        ('user', 'User'),
-    )
-    role = models.CharField(max_length=5, choices=ROLE_CHOICES, default='user')
-    created_at = models.DateTimeField(auto_now_add=True)
+    quota = models.IntegerField(default=0)
 
     def __str__(self):
         return f"{self.username}"

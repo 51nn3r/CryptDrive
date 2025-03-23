@@ -2,8 +2,10 @@ services:
   web:
     build: .
     # for production - command: gunicorn CryptDrive.wsgi:application --bind 0.0.0.0:8000
-    command: sh -c "python cryptdrive/manage.py migrate &&
-           python cryptdrive/manage.py runserver 0.0.0.0:8000"
+    command: sh -c "apt-get update && apt-get install -y netcat-openbsd &&
+             while ! nc -z db 5432; do sleep 1; done &&
+             python cryptdrive/manage.py migrate &&
+             python cryptdrive/manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/cryptdrive
     ports:
