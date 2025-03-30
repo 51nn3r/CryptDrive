@@ -15,10 +15,15 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
+
+from core.views import ReactBaseView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('core/', include('core.urls')),
     path('api/', include('api.urls')),
+
+    # Base page
+    re_path(r'^.*$', ReactBaseView.as_view(), name='react'),
 ]
