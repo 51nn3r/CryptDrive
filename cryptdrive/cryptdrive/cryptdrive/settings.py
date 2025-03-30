@@ -85,7 +85,7 @@ DB_CONFIGS = {
     },
     'postgres': {
         'ENGINE': os.environ.get('POSTGRES_ENGINE', 'django.db.backends.postgresql'),
-        'NAME': os.environ.get('POSTGRES_DATABASE', 'cryptdrive'),
+        'NAME': os.environ.get('POSTGRES_DB', 'cryptdrive'),
         'USER': os.environ.get('POSTGRES_USER', 'root'),
         'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'root'),
         'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
