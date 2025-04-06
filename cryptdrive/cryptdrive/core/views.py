@@ -7,7 +7,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model, authenticate, login, logout
 
-from core.serializers import UserRegisterSerializer, UserLoginSerializer
+from .serializers import UserRegisterSerializer, UserLoginSerializer
+from .services import (
+    save_public_key,
+    user_has_public_key,
+    get_public_key,
+    save_encrypted_file,
+)
 
 User = get_user_model()
 
@@ -76,3 +82,54 @@ class LogoutView(APIView):
     def get(self, request, *args, **kwargs):
         logout(request)
         return redirect('core:login')
+
+
+class UploadPublicKeyView(APIView):
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return Response({"error": "Not authenticated"}, status=401)
+
+        public_key_b64 = request.data.get('publicKey')
+        if not public_key_b64:
+            return Response({"error": "No publicKey provided"}, status=400)
+
+        save_public_key(request.user, public_key_b64)
+        return Response({"msg": "Public key saved"}, status=200)
+
+
+class CheckPublicKeyView(APIView):
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return Response({"error": "Not authenticated"}, status=401)
+
+        has_key = user_has_public_key(request.user)
+        return Response({"hasKey": has_key}, status=200)
+
+
+class GetPublicKeyView(APIView):
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return Response({"error": "Not authenticated"}, status=401)
+
+        key = get_public_key(request.user)
+        if not key:
+            return Response({"error": "No public key found"}, status=404)
+
+        return Response({"publicKey": key}, status=200)
+
+
+class UploadEncryptedFileView(APIView):
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return Response({"error": "Not authenticated"}, status=401)
+
+        filename = request.data.get('filename')
+        enc_file = request.data.get('encFile')
+        enc_aes = request.data.get('encAES')
+        if not filename or not enc_file or not enc_aes:
+            return Response({"error": "Missing fields"}, status=400)
+
+        # @TODO: continue here
+        # file_obj = save_encrypted_file(request.user, filename, enc_file)
+
+        return Response({"msg": "Encrypted file saved"}, status=200)
