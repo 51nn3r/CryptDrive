@@ -7,12 +7,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model, authenticate, login, logout
 
-from .serializers import UserRegisterSerializer, UserLoginSerializer
+from .serializers import UserRegisterSerializer, UserLoginSerializer, EncryptedFileUploadSerializer
 from .services import (
     save_public_key,
     user_has_public_key,
     get_public_key,
-    save_encrypted_file,
+    save_encrypted_file, save_shared_key,
 )
 
 User = get_user_model()
@@ -123,13 +123,16 @@ class UploadEncryptedFileView(APIView):
         if not request.user.is_authenticated:
             return Response({"error": "Not authenticated"}, status=401)
 
-        filename = request.data.get('filename')
-        enc_file = request.data.get('encFile')
-        enc_aes = request.data.get('encAES')
-        if not filename or not enc_file or not enc_aes:
-            return Response({"error": "Missing fields"}, status=400)
+        serializer = EncryptedFileUploadSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-        # @TODO: continue here
-        # file_obj = save_encrypted_file(request.user, filename, enc_file)
+        filename = serializer.validated_data['filename']
+        iv = serializer.validated_data['iv']
+        enc_file = serializer.validated_data['encFile']
+        enc_aes = serializer.validated_data['encAES']
+
+        file_obj = save_encrypted_file(request.user, filename, enc_file, iv)
+        save_shared_key(file_obj, request.user, enc_aes)
 
         return Response({"msg": "Encrypted file saved"}, status=200)

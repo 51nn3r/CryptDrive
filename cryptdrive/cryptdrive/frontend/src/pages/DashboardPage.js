@@ -91,7 +91,7 @@ function DashboardPage() {
             const { aesKey, rawAES } = await generateAESKey();
 
             // 2) Encrypt the file with AES
-            const { encryptedFile, iv } = await encryptFileB64(selectedFile.arrayBuffer(), aesKey);
+            const { encryptedFile, iv } = await encryptFileB64(await selectedFile.arrayBuffer(), aesKey);
 
             // 3) Get the public key from the server (or use local if you stored it)
             const publicKeyBase64 = await getPublicKeyFromServer();
@@ -100,8 +100,7 @@ function DashboardPage() {
             const encryptedAES = await encryptAESKeyWithRSA(rawAES, publicKeyBase64);
 
             // 5) Upload the encrypted file and the encrypted AES key (in base64) as JSON
-            // @TODO continue here
-            // await uploadFileWithAESKey(encryptedFile, iv, encryptedAES);
+            await uploadFileWithAESKey(selectedFile.name, encryptedFile, iv, encryptedAES);
 
             setWarning('File encrypted and uploaded successfully!');
         } catch (err) {

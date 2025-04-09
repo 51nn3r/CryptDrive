@@ -1,5 +1,9 @@
+import os
+
 from rest_framework import serializers
+
 from django.contrib.auth import get_user_model
+from django.utils.text import get_valid_filename
 
 User = get_user_model()
 
@@ -51,3 +55,13 @@ class UserLoginSerializer(serializers.Serializer):
             raise serializers.ValidationError(errors)
 
         return data
+
+
+class EncryptedFileUploadSerializer(serializers.Serializer):
+    filename = serializers.CharField()
+    iv = serializers.CharField()
+    encFile = serializers.CharField()
+    encAES = serializers.CharField()
+
+    def validate_filename(self, value):
+        return get_valid_filename(os.path.basename(value))

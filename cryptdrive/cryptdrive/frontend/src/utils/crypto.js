@@ -63,7 +63,7 @@ export async function checkPublicKeyOnServer() {
  * Suppose endpoint returns: { publicKey: '...' }
  */
 export async function getPublicKeyFromServer() {
-    const response = await fetch('/core/get-public-key');
+    const response = await fetch('/core/get-public-key/');
     if (!response.ok) {
         throw new Error('No public key found on server');
     }
@@ -210,8 +210,9 @@ export async function decryptAESKeyWithRSA(encryptedAESBase64, privateKeyBase64)
  * Upload encrypted file + IV + encrypted AES key as JSON
  * Endpoint: /core/upload-encrypted/
  */
-export async function uploadFileWithAESKey(encryptedFileBase64, ivBase64, encryptedAESBase64) {
+export async function uploadFileWithAESKey(filename, encryptedFileBase64, ivBase64, encryptedAESBase64) {
     const payload = {
+        filename: filename,
         iv: ivBase64,
         encFile: encryptedFileBase64,
         encAES: encryptedAESBase64,
@@ -228,7 +229,7 @@ export async function uploadFileWithAESKey(encryptedFileBase64, ivBase64, encryp
     });
 
     if (!response.ok) {
-        throw new Error('Failed to upload encrypted file');
+        throw new Error('Failed to upload encrypted file: ' + JSON.stringify(await response.json()));
     }
 }
 
