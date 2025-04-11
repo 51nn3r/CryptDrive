@@ -5,6 +5,8 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.utils.text import get_valid_filename
 
+from .models import File
+
 User = get_user_model()
 
 
@@ -65,3 +67,9 @@ class EncryptedFileUploadSerializer(serializers.Serializer):
 
     def validate_filename(self, value):
         return get_valid_filename(os.path.basename(value))
+
+
+class FileListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = File
+        fields = ['id', 'filename', 'created_at']

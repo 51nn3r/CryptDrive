@@ -72,6 +72,52 @@ export async function getPublicKeyFromServer() {
 }
 
 /**
+ * Retrieve file crypto metadata.
+ * Suppose endpoint returns:
+ *      {
+ *          'filename': ...,
+ *          'iv': ...,
+ *          'encryptedAES': ...,
+ *      }
+ */
+export async function getFileCryptoMetadata(fileID) {
+    const response = await fetch(`/core/download/${fileID}/meta/`, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to download aes key: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    return {
+        filename: data.filename,
+        iv: base64ToBuffer(data.iv),
+        encryptedAES: base64ToBuffer(data.encryptedSymKey),
+    };
+}
+
+/**
+ * Retrieve file data (encrypted)
+ */
+export async function getFileEncryptedData(fileID) {
+    const response = await fetch(`/core/download/${fileID}/data/`, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to download file: ${response.status}`);
+    }
+
+    return await response.arrayBuffer();
+}
+
+/**
  * Generate AES key (AES-GCM 256).
  */
 export async function generateAESKey() {
@@ -122,7 +168,7 @@ export async function decryptFileRaw(encryptedFile, iv, aesKey) {
         aesKey,
         encryptedFile
     );
-    return decrypted; // ArrayBuffer
+    return decrypted;
 }
 
 /**
@@ -135,17 +181,6 @@ export async function encryptFileB64(fileBuffer, aesKey) {
         encryptedFile: bufferToBase64(encryptedFile),
         iv: bufferToBase64(iv),
     };
-}
-
-/**
- * High-level function:
- * Decrypt base64-encoded data with AES, returning ArrayBuffer
- */
-export async function decryptFileB64(encryptedFileB64, ivB64, aesKey) {
-    const encryptedFile = base64ToBuffer(encryptedFileB64);
-    const ivArray = new Uint8Array(base64ToBuffer(ivB64));
-    const decrypted = await decryptFileRaw(encryptedFile, ivArray, aesKey);
-    return decrypted; // ArrayBuffer
 }
 
 /**
@@ -177,9 +212,9 @@ export async function encryptAESKeyWithRSA(rawAES, publicKey) {
 
 /**
  * Decrypt the AES key with an RSA private key
- * Return base64 of the raw AES key
+ * Return AES key
  */
-export async function decryptAESKeyWithRSA(encryptedAESBase64, privateKeyBase64) {
+export async function decryptAESKeyWithRSA(encryptedAES, privateKeyBase64) {
     const privateKeyBin = base64ToBuffer(privateKeyBase64);
     const privateKey = await window.crypto.subtle.importKey(
         'pkcs8',
@@ -189,15 +224,19 @@ export async function decryptAESKeyWithRSA(encryptedAESBase64, privateKeyBase64)
         ['decrypt']
     );
 
-    const encryptedAESBin = base64ToBuffer(encryptedAESBase64);
-
-    const decryptedAES = await window.crypto.subtle.decrypt(
+    const rawAESKey = await window.crypto.subtle.decrypt(
         { name: 'RSA-OAEP' },
         privateKey,
-        encryptedAESBin
+        encryptedAES
     );
 
-    return bufferToBase64(decryptedAES); // we re-encode raw bytes to base64
+    return await window.crypto.subtle.importKey(
+        'raw',
+        rawAESKey,
+        { name: 'AES-GCM' },
+        false,
+        ['encrypt', 'decrypt']
+    );
 }
 
 /**

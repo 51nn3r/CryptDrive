@@ -11,7 +11,12 @@ import {
     uploadFileWithAESKey,
     getPublicKeyFromServer,
     bufferToBase64,
+    getFileCryptoMetadata,
+    getFileEncryptedData,
+    decryptAESKeyWithRSA,
+    decryptFileRaw,
 } from '../utils/crypto';
+import { getCookie } from '../utils/csrf';
 
 function DashboardPage() {
     const [hasPublicKey, setHasPublicKey] = useState(false);
@@ -19,6 +24,7 @@ function DashboardPage() {
     const [selectedFile, setSelectedFile] = useState(null);
     const [showPrivateKey, setShowPrivateKey] = useState(false);
     const [privateKeyValue, setPrivateKeyValue] = useState('');
+    const [files, setFiles] = useState([]);
 
     const user = JSON.parse(localStorage.getItem('user'));
     const navigate = useNavigate();
@@ -38,6 +44,16 @@ function DashboardPage() {
                 .catch(() => setHasPublicKey(false));
         }
     }, [user]);
+
+    // Loading a list of files (only if the public key already exists)
+    useEffect(() => {
+        if (hasPublicKey) {
+            fetch('/core/files/')
+                .then(res => res.json())
+                .then(data => setFiles(data))
+                .catch(err => console.error('Failed to load files:', err));
+        }
+    }, [hasPublicKey]);
 
     // Generates a new RSA key pair (client-side)
     const handleGenerateRSA = async () => {
@@ -74,7 +90,7 @@ function DashboardPage() {
         }
     };
 
-    // Encrypt and upload the file via JSON approach
+    // Encrypt and upload the file
     const handleUpload = async () => {
         if (!selectedFile) {
             setWarning('Please select a file first.');
@@ -111,6 +127,40 @@ function DashboardPage() {
         }
     };
 
+    // Download and decrypt
+    const handleDownload = async (fileId) => {
+        setWarning(null);
+        try {
+            const privateKey = localStorage.getItem('privateKey');
+            if (!privateKey) {
+                throw new Error('No private key found locally.');
+                return;
+            }
+
+            const {filename, iv, encryptedAES} = await getFileCryptoMetadata(fileId);
+            const aesKey = await decryptAESKeyWithRSA(encryptedAES, privateKey)
+
+            const encryptedArrayBuffer = await getFileEncryptedData(fileId);
+            const decryptedArrayBuffer = await decryptFileRaw(encryptedArrayBuffer, iv, aesKey);
+
+            // Create a temporary download link
+            const url = window.URL.createObjectURL(new Blob([decryptedArrayBuffer]));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            // Cleanup
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+            setWarning(`File '${filename}' downloaded successfully.`);
+        } catch (err) {
+            console.error('Download error:', err);
+            setWarning('Failed to download file.');
+        }
+    };
+
     if (!user) return null;
 
     return (
@@ -123,6 +173,21 @@ function DashboardPage() {
                 <button className="btn btn-secondary" onClick={handleGenerateRSA}>
                     Generate new RSA key pair
                 </button>
+            </div>
+
+            <hr />
+
+            <div className="container mt-5">
+                <ul className="list-group">
+                    {files.map(file => (
+                        <li key={file.id} className="list-group-item d-flex justify-content-between align-items-center">
+                            {file.filename}
+                            <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownload(file.id)}>
+                                Download
+                            </button>
+                        </li>
+                    ))}
+                </ul>
             </div>
 
             <hr />

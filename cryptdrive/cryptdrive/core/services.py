@@ -1,6 +1,7 @@
 import os
 
 import uuid
+from pathlib import Path
 
 from django.conf import settings
 from django.db import transaction
@@ -30,7 +31,7 @@ def save_encrypted_file(user, filename, encrypted_file, iv):
         size=len(encrypted_file),
     )
 
-    path = os.path.join('encrypted_uploads', f'{user.id}_{file_obj.id}_{filename}_{uuid.uuid4()}')
+    path = Path('encrypted_uploads') / f'{user.id}_{file_obj.id}_{filename}_{uuid.uuid4()}'
     full_path = os.path.join(settings.MEDIA_ROOT, path)
 
     with open(full_path, 'wb') as file:
