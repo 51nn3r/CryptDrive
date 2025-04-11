@@ -68,7 +68,7 @@ export async function getPublicKeyFromServer() {
         throw new Error('No public key found on server');
     }
     const data = await response.json();
-    return data.publicKey;
+    return base64ToBuffer(data.publicKey);
 }
 
 /**
@@ -87,7 +87,7 @@ export async function generateAESKey() {
 
     return {
         aesKey: key,
-        rawAES: bufferToBase64(raw),
+        rawAES: raw,
     };
 }
 
@@ -149,17 +149,14 @@ export async function decryptFileB64(encryptedFileB64, ivB64, aesKey) {
 }
 
 /**
- * Encrypt the AES key with an RSA public key (base64 -> importKey -> encrypt).
+ * Encrypt the AES key with an RSA public key.
  * Return base64 of the encrypted AES key.
  */
-export async function encryptAESKeyWithRSA(rawAESBase64, publicKeyBase64) {
-    // decode public key from base64
-    const pubKeyBin = base64ToBuffer(publicKeyBase64);
-
+export async function encryptAESKeyWithRSA(rawAES, publicKey) {
     // import the public key
     const pubKey = await window.crypto.subtle.importKey(
         'spki',
-        pubKeyBin,
+        publicKey,
         {
             name: 'RSA-OAEP',
             hash: 'SHA-256',
@@ -168,17 +165,14 @@ export async function encryptAESKeyWithRSA(rawAESBase64, publicKeyBase64) {
         ['encrypt']
     );
 
-    // decode raw AES key from base64
-    const rawAESBin = base64ToBuffer(rawAESBase64);
-
     // encrypt raw AES with RSA
     const encrypted = await window.crypto.subtle.encrypt(
         { name: 'RSA-OAEP' },
         pubKey,
-        rawAESBin
+        rawAES
     );
 
-    return bufferToBase64(encrypted);
+    return encrypted;
 }
 
 /**
@@ -210,22 +204,20 @@ export async function decryptAESKeyWithRSA(encryptedAESBase64, privateKeyBase64)
  * Upload encrypted file + IV + encrypted AES key as JSON
  * Endpoint: /core/upload-encrypted/
  */
-export async function uploadFileWithAESKey(filename, encryptedFileBase64, ivBase64, encryptedAESBase64) {
-    const payload = {
-        filename: filename,
-        iv: ivBase64,
-        encFile: encryptedFileBase64,
-        encAES: encryptedAESBase64,
-    };
+export async function uploadFileWithAESKey(filename, encFile, ivBase64, encryptedAESBase64) {
+    const formData = new FormData();
+    formData.append('filename', filename);
+    formData.append('iv', ivBase64);
+    formData.append('encFile', encFile);
+    formData.append('encAES', encryptedAESBase64);
 
     const csrfToken = getCookie('csrftoken');
     const response = await fetch('/core/upload-encrypted/', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
             'X-CSRFToken': csrfToken,
         },
-        body: JSON.stringify(payload),
+        body: formData,
     });
 
     if (!response.ok) {
@@ -282,7 +274,7 @@ export async function validateMatchingKeys(privateKeyBase64) {
 
 /*  Helpers for base64 <-> ArrayBuffer  */
 
-function bufferToBase64(arrayBuffer) {
+export function bufferToBase64(arrayBuffer) {
     const bytes = new Uint8Array(arrayBuffer);
     let binary = '';
     for (let i = 0; i < bytes.length; i++) {
@@ -291,7 +283,7 @@ function bufferToBase64(arrayBuffer) {
     return btoa(binary);
 }
 
-function base64ToBuffer(base64) {
+export function base64ToBuffer(base64) {
     const binary = atob(base64);
     const len = binary.length;
     const bytes = new Uint8Array(len);

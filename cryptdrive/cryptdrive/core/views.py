@@ -2,9 +2,10 @@ from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic import TemplateView
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, permissions
 from django.contrib.auth import get_user_model, authenticate, login, logout
 
 from .serializers import UserRegisterSerializer, UserLoginSerializer, EncryptedFileUploadSerializer
@@ -119,10 +120,10 @@ class GetPublicKeyView(APIView):
 
 
 class UploadEncryptedFileView(APIView):
-    def post(self, request):
-        if not request.user.is_authenticated:
-            return Response({"error": "Not authenticated"}, status=401)
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
+    def post(self, request):
         serializer = EncryptedFileUploadSerializer(data=request.data)
         if not serializer.is_valid():
             return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)

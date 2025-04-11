@@ -60,7 +60,7 @@ class UserLoginSerializer(serializers.Serializer):
 class EncryptedFileUploadSerializer(serializers.Serializer):
     filename = serializers.CharField()
     iv = serializers.CharField()
-    encFile = serializers.CharField()
+    encFile = serializers.FileField()
     encAES = serializers.CharField()
 
     def validate_filename(self, value):

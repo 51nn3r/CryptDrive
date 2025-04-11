@@ -22,19 +22,20 @@ def get_public_key(user):
 
 
 @transaction.atomic
-def save_encrypted_file(user, filename, encrypted_data_b64, iv):
+def save_encrypted_file(user, filename, encrypted_file, iv):
     file_obj = File.objects.create(
         owner=user,
         filename=filename,
         iv=iv,
-        size=len(encrypted_data_b64),
+        size=len(encrypted_file),
     )
 
     path = os.path.join('encrypted_uploads', f'{user.id}_{file_obj.id}_{filename}_{uuid.uuid4()}')
     full_path = os.path.join(settings.MEDIA_ROOT, path)
 
-    with open(full_path, 'wb') as f:
-        f.write(encrypted_data_b64.encode())
+    with open(full_path, 'wb') as file:
+        for chunk in encrypted_file.chunks():
+            file.write(chunk)
 
     file_obj.ciphertext_path = path
     file_obj.save()

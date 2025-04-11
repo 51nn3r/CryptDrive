@@ -5,10 +5,12 @@ import {
     generateRSAPair,
     uploadPublicKey,
     generateAESKey,
+    encryptFileRaw,
     encryptFileB64,
     encryptAESKeyWithRSA,
     uploadFileWithAESKey,
     getPublicKeyFromServer,
+    bufferToBase64,
 } from '../utils/crypto';
 
 function DashboardPage() {
@@ -91,16 +93,16 @@ function DashboardPage() {
             const { aesKey, rawAES } = await generateAESKey();
 
             // 2) Encrypt the file with AES
-            const { encryptedFile, iv } = await encryptFileB64(await selectedFile.arrayBuffer(), aesKey);
+            const { encryptedFile, iv } = await encryptFileRaw(await selectedFile.arrayBuffer(), aesKey);
 
             // 3) Get the public key from the server (or use local if you stored it)
-            const publicKeyBase64 = await getPublicKeyFromServer();
+            const publicKey = await getPublicKeyFromServer();
 
             // 4) Encrypt the raw AES key with the server's public key
-            const encryptedAES = await encryptAESKeyWithRSA(rawAES, publicKeyBase64);
+            const encryptedAES = await encryptAESKeyWithRSA(rawAES, publicKey);
 
             // 5) Upload the encrypted file and the encrypted AES key (in base64) as JSON
-            await uploadFileWithAESKey(selectedFile.name, encryptedFile, iv, encryptedAES);
+            await uploadFileWithAESKey(selectedFile.name, new Blob([encryptedFile]), bufferToBase64(iv), bufferToBase64(encryptedAES));
 
             setWarning('File encrypted and uploaded successfully!');
         } catch (err) {
