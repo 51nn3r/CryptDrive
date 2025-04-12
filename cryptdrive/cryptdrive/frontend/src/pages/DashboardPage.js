@@ -16,6 +16,7 @@ import {
     decryptAESKeyWithRSA,
     decryptFileRaw,
 } from '../utils/crypto';
+import SharePanel from '../components/SharePanel';
 import { getCookie } from '../utils/csrf';
 
 function DashboardPage() {
@@ -25,6 +26,7 @@ function DashboardPage() {
     const [showPrivateKey, setShowPrivateKey] = useState(false);
     const [privateKeyValue, setPrivateKeyValue] = useState('');
     const [files, setFiles] = useState([]);
+    const [selectedShareFileId, setSelectedShareFileId] = useState(null);
 
     const user = JSON.parse(localStorage.getItem('user'));
     const navigate = useNavigate();
@@ -106,19 +108,19 @@ function DashboardPage() {
 
         try {
             // 1) Generate AES key
-            const { aesKey, rawAES } = await generateAESKey();
+            const aesKey  = await generateAESKey();
 
             // 2) Encrypt the file with AES
             const { encryptedFile, iv } = await encryptFileRaw(await selectedFile.arrayBuffer(), aesKey);
 
             // 3) Get the public key from the server (or use local if you stored it)
-            const publicKey = await getPublicKeyFromServer();
+            const pubKeyBase64 = await getPublicKeyFromServer();
 
             // 4) Encrypt the raw AES key with the server's public key
-            const encryptedAES = await encryptAESKeyWithRSA(rawAES, publicKey);
+            const encryptedAESB64 = await encryptAESKeyWithRSA(aesKey, pubKeyBase64);
 
             // 5) Upload the encrypted file and the encrypted AES key (in base64) as JSON
-            await uploadFileWithAESKey(selectedFile.name, new Blob([encryptedFile]), bufferToBase64(iv), bufferToBase64(encryptedAES));
+            await uploadFileWithAESKey(selectedFile.name, new Blob([encryptedFile]), bufferToBase64(iv), encryptedAESB64);
 
             setWarning('File encrypted and uploaded successfully!');
         } catch (err) {
@@ -161,6 +163,13 @@ function DashboardPage() {
         }
     };
 
+    const toggleShare = (fileId) => {
+        if (selectedShareFileId === fileId) {
+            setSelectedShareFileId(null);
+        } else {
+            setSelectedShareFileId(fileId);
+        }
+    };
     if (!user) return null;
 
     return (
@@ -182,6 +191,13 @@ function DashboardPage() {
                     {files.map(file => (
                         <li key={file.id} className="list-group-item d-flex justify-content-between align-items-center">
                             {file.filename}
+                            <button className="btn btn-sm btn-outline-secondary" onClick={() => toggleShare(file.id)}>
+                                Share
+                            </button>
+                            {selectedShareFileId === file.id && (
+                                <SharePanel fileId={file.id} onClose={() => setSelectedShareFileId(null)} />
+                            )}
+
                             <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownload(file.id)}>
                                 Download
                             </button>

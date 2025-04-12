@@ -49,8 +49,10 @@ export async function uploadPublicKey(publicKeyBase64) {
  * Check if a public key exists on the server.
  * Suppose Django returns { hasKey: true/false }
  */
-export async function checkPublicKeyOnServer() {
-    const response = await fetch('/core/has-public-key/', { method: 'GET' });
+export async function checkPublicKeyOnServer(userId=null) {
+    const requestParams = userId ? `${encodeURIComponent(userId)}` : '';
+
+    const response = await fetch(`/core/has-public-key/${requestParams}`, { method: 'GET' });
     if (!response.ok) {
         return false;
     }
@@ -62,13 +64,15 @@ export async function checkPublicKeyOnServer() {
  * Retrieve the server's public key in base64 for local encryption tasks.
  * Suppose endpoint returns: { publicKey: '...' }
  */
-export async function getPublicKeyFromServer() {
-    const response = await fetch('/core/get-public-key/');
+export async function getPublicKeyFromServer(userId=null) {
+    const requestParams = userId ? `${encodeURIComponent(userId)}` : '';
+
+    const response = await fetch(`/core/get-public-key/${requestParams}`);
     if (!response.ok) {
         throw new Error('No public key found on server');
     }
     const data = await response.json();
-    return base64ToBuffer(data.publicKey);
+    return data.publicKey;
 }
 
 /**
@@ -88,7 +92,7 @@ export async function getFileCryptoMetadata(fileID) {
         },
     });
     if (!response.ok) {
-        throw new Error(`Failed to download aes key: ${response.status}`);
+        throw new Error(`Failed to download aes key (${response.status}): ` + JSON.stringify(await response.json()));
     }
 
     const data = await response.json();
@@ -111,7 +115,7 @@ export async function getFileEncryptedData(fileID) {
         },
     });
     if (!response.ok) {
-        throw new Error(`Failed to download file: ${response.status}`);
+        throw new Error(`Failed to download file (${response.status}): ` + JSON.stringify(await response.json()));
     }
 
     return await response.arrayBuffer();
@@ -129,12 +133,8 @@ export async function generateAESKey() {
         true,
         ['encrypt', 'decrypt']
     );
-    const raw = await window.crypto.subtle.exportKey('raw', key);
 
-    return {
-        aesKey: key,
-        rawAES: raw,
-    };
+    return key;
 }
 
 /**
@@ -185,9 +185,13 @@ export async function encryptFileB64(fileBuffer, aesKey) {
 
 /**
  * Encrypt the AES key with an RSA public key.
+ * @param aesKey: CryptoKey
+ * @param publicKeyBase64: exported aes in base64 (String)
+ *
  * Return base64 of the encrypted AES key.
  */
-export async function encryptAESKeyWithRSA(rawAES, publicKey) {
+export async function encryptAESKeyWithRSA(aesKey, publicKeyBase64) {
+    const publicKey = base64ToBuffer(publicKeyBase64);
     // import the public key
     const pubKey = await window.crypto.subtle.importKey(
         'spki',
@@ -200,6 +204,7 @@ export async function encryptAESKeyWithRSA(rawAES, publicKey) {
         ['encrypt']
     );
 
+    const rawAES = await window.crypto.subtle.exportKey('raw', aesKey);
     // encrypt raw AES with RSA
     const encrypted = await window.crypto.subtle.encrypt(
         { name: 'RSA-OAEP' },
@@ -207,7 +212,7 @@ export async function encryptAESKeyWithRSA(rawAES, publicKey) {
         rawAES
     );
 
-    return encrypted;
+    return bufferToBase64(encrypted);
 }
 
 /**
@@ -234,7 +239,7 @@ export async function decryptAESKeyWithRSA(encryptedAES, privateKeyBase64) {
         'raw',
         rawAESKey,
         { name: 'AES-GCM' },
-        false,
+        true,
         ['encrypt', 'decrypt']
     );
 }
@@ -309,6 +314,50 @@ export async function validateMatchingKeys(privateKeyBase64) {
 
     const decryptedStr = new TextDecoder().decode(decrypted);
     return decryptedStr === 'Test Encryption Data';
+}
+
+/**
+ * Fetch list of users, filtered by search term
+ * GET /core/list-users/{searchTerm}
+ */
+export async function fetchUsers(searchTerm='') {
+    const requestParams = searchTerm ? `${encodeURIComponent(searchTerm)}` : '';
+    const response = await fetch(`/core/list-users/${requestParams}`, {
+    method: 'GET',
+    headers: {
+          'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to fetch users (${response.status}): ` + JSON.stringify(await response.json()));
+    }
+    return await response.json(); // [{ id, username }, ...] - UserListSerializer format
+}
+
+/**
+ * Share file (re-encrypt AES key with recipient's public key on client)
+ * then send it to server:
+ * POST /core/share-file/ with { file_id, recipient_id, encrypted_sym_key }
+ */
+export async function shareFile(fileId, recipientId, encryptedSymKeyB64) {
+    const response = await fetch('/core/share-file/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({
+            file_id: fileId,
+            recipient_id: recipientId,
+            encrypted_sym_key: encryptedSymKeyB64,
+        }),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to share file (${response.status}): ` + JSON.stringify(await response.json()));
+    }
+    return await response.json(); // { msg: 'File shared successfully', shared_key_id: ... }
 }
 
 /*  Helpers for base64 <-> ArrayBuffer  */

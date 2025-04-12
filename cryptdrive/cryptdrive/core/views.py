@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from django.http import JsonResponse, FileResponse
-from django.shortcuts import redirect
+from django.shortcuts import redirect, get_object_or_404
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic import TemplateView
 from django.contrib.auth import get_user_model, authenticate, login, logout
@@ -11,8 +11,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 
-from .models import File
-from .serializers import UserRegisterSerializer, UserLoginSerializer, EncryptedFileUploadSerializer, FileListSerializer
+from .models import File, SharedKey
+from .serializers import UserRegisterSerializer, UserLoginSerializer, EncryptedFileUploadSerializer, FileListSerializer, \
+    UserListSerializer, ShareFileSerializer
 from .services import (
     save_public_key,
     user_has_public_key,
@@ -103,20 +104,33 @@ class UploadPublicKeyView(APIView):
 
 
 class CheckPublicKeyView(APIView):
-    def get(self, request):
-        if not request.user.is_authenticated:
-            return Response({"error": "Not authenticated"}, status=401)
+    permission_classes = [permissions.IsAuthenticated]
 
-        has_key = user_has_public_key(request.user)
+    def get(self, request, user_id=None):
+        if user_id is None:
+            user = request.user
+        else:
+            user = User.objects.filter(id=user_id).first()
+            if not user:
+                return Response({"error": "User not found"}, status=404)
+
+        has_key = user_has_public_key(user)
+
         return Response({"hasKey": has_key}, status=200)
 
 
 class GetPublicKeyView(APIView):
-    def get(self, request):
-        if not request.user.is_authenticated:
-            return Response({"error": "Not authenticated"}, status=401)
+    permission_classes = [permissions.IsAuthenticated]
 
-        key = get_public_key(request.user)
+    def get(self, request, user_id=None):
+        if user_id is None:
+            user = request.user
+        else:
+            user = User.objects.filter(id=user_id).first()
+            if not user:
+                return Response({"error": "User not found"}, status=404)
+
+        key = get_public_key(user)
         if not key:
             return Response({"error": "No public key found"}, status=404)
 
@@ -147,7 +161,8 @@ class UserFileListView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        files = File.objects.filter(owner=request.user)
+        shared_keys = SharedKey.objects.filter(recipient=request.user).select_related('file', 'file__owner')
+        files = [shared_keys.file for shared_keys in shared_keys]
         serializer = FileListSerializer(files, many=True)
 
         return Response(serializer.data)
@@ -157,7 +172,7 @@ class FileMetaView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, file_id):
-        file_obj = File.objects.filter(id=file_id, owner=request.user).first()
+        file_obj = File.objects.filter(id=file_id).first()
         if not file_obj:
             return Response({'error': 'File not found'}, status=404)
 
@@ -170,6 +185,7 @@ class FileMetaView(APIView):
             "iv": file_obj.iv,
             "encryptedSymKey": shared_key_obj.encrypted_sym_key,
         }
+
         return Response(data, status=200)
 
 
@@ -177,9 +193,13 @@ class FileEncryptedDataView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, file_id):
-        file_obj = File.objects.filter(id=file_id, owner=request.user).first()
+        file_obj = File.objects.filter(id=file_id).first()
         if not file_obj:
             return Response({'error': 'File not found'}, status=404)
+
+        shared_key_obj = file_obj.shared_keys.filter(recipient=request.user).first()
+        if not shared_key_obj:
+            return Response({'error': 'Access denied'}, status=404)
 
         file_path = Path(settings.MEDIA_ROOT) / file_obj.ciphertext_path
 
@@ -187,3 +207,42 @@ class FileEncryptedDataView(APIView):
             return Response({'error': 'File not found on disk'}, status=404)
 
         return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=file_obj.filename)
+
+
+class UsersListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, search=''):
+        print(search)
+        users = User.objects.filter(
+            username__icontains=search
+        ).exclude(id=request.user.id).exclude(public_key=None)[:10]
+
+        serializer = UserListSerializer(users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ShareFileView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = ShareFileSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"error": serializer.errors}, status=400)
+
+        file_id = serializer.validated_data['file_id']
+        recipient_id = serializer.validated_data['recipient_id']
+        encrypted_sym_key_b64 = serializer.validated_data['encrypted_sym_key']
+
+        file_obj = get_object_or_404(File, id=file_id, owner=request.user)
+        recipient = get_object_or_404(User, id=recipient_id)
+
+        shared_key_obj, created = SharedKey.objects.update_or_create(
+            file=file_obj,
+            recipient=recipient,
+            defaults={'encrypted_sym_key': encrypted_sym_key_b64},
+        )
+        return Response({
+            'msg': 'File shared successfully',
+            'shared_key_id': shared_key_obj.id
+        })

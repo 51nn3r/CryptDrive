@@ -73,3 +73,15 @@ class FileListSerializer(serializers.ModelSerializer):
     class Meta:
         model = File
         fields = ['id', 'filename', 'created_at']
+
+
+class UserListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username']
+
+
+class ShareFileSerializer(serializers.Serializer):
+    file_id = serializers.IntegerField()
+    recipient_id = serializers.IntegerField()
+    encrypted_sym_key = serializers.CharField()
