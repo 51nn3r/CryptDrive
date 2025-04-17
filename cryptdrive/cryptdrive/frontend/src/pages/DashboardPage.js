@@ -19,6 +19,8 @@ import {
 } from '../utils/crypto';
 import SharePanel from '../components/SharePanel';
 import { getCookie } from '../utils/csrf';
+import { deleteFile } from '../utils/helpers';
+
 
 function DashboardPage() {
     const [hasPublicKey, setHasPublicKey] = useState(false);
@@ -189,6 +191,15 @@ function DashboardPage() {
         }
     };
 
+    const handleDelete = async (id) => {
+        if (!window.confirm('You are going to delete this file. Are you sure?')) return;
+        try {
+            await deleteFile(id);
+            setFiles(prev => prev.filter(f => f.id !== id));
+            setWarning('File deleted');
+        } catch (e) { setWarning('Delete failed'); }
+    };
+
     const toggleShare = (fileId) => {
         if (selectedShareFileId === fileId) {
             setSelectedShareFileId(null);
@@ -243,6 +254,10 @@ function DashboardPage() {
                             {selectedShareFileId === file.id && (
                                 <SharePanel fileId={file.id} onClose={() => setSelectedShareFileId(null)} />
                             )}
+
+                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(file.id)}>
+                                Delete
+                            </button>
 
                             <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownload(file.id)}>
                                 Download

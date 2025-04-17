@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from django.db import transaction
 from django.http import JsonResponse, FileResponse
 from django.shortcuts import redirect, get_object_or_404
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -12,14 +13,22 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 
 from .models import File, SharedKey
-from .serializers import UserRegisterSerializer, UserLoginSerializer, EncryptedFileUploadSerializer, FileListSerializer, \
-    UserListSerializer, ShareFileSerializer
+from .serializers import (
+    UserRegisterSerializer,
+    UserLoginSerializer,
+    EncryptedFileUploadSerializer,
+    FileListSerializer,
+    UserListSerializer,
+    ShareFileSerializer,
+)
 from .services import (
     save_public_key,
     user_has_public_key,
     get_public_key,
-    save_encrypted_file, save_shared_key,
+    save_encrypted_file,
+    save_shared_key,
 )
+from .permissions import IsOwner
 
 User = get_user_model()
 
@@ -157,6 +166,22 @@ class UploadEncryptedFileView(APIView):
         return Response({"msg": "Encrypted file saved"}, status=200)
 
 
+class ManageFileView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    @transaction.atomic
+    def delete(self, request, file_id):
+        file_obj = get_object_or_404(File, id=file_id)
+        self.check_object_permissions(request, file_obj)
+
+        file_path = Path(settings.MEDIA_ROOT) / file_obj.ciphertext_path
+        if file_path.exists():
+            file_path.unlink(missing_ok=True)
+
+        file_obj.delete()
+        return Response({'msg': 'File deleted'}, status=200)
+
+
 class UserFileListView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -213,7 +238,6 @@ class UsersListView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, search=''):
-        print(search)
         users = User.objects.filter(
             username__icontains=search
         ).exclude(id=request.user.id).exclude(public_key=None)[:10]

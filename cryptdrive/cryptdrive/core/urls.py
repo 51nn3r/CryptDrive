@@ -11,6 +11,7 @@ from .views import (
     FileEncryptedDataView,
     UsersListView,
     ShareFileView,
+    ManageFileView,
 )
 
 app_name = 'core'
@@ -32,4 +33,5 @@ urlpatterns = [
     path('list-users/', UsersListView.as_view(), name='list-users-default'),
     path('list-users/<str:search>', UsersListView.as_view(), name='list-users'),
     path('share-file/', ShareFileView.as_view(), name='file-share'),
+    path('manage-file/<int:file_id>', ManageFileView.as_view(), name='file-manage'),
 ]
