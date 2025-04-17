@@ -15,12 +15,14 @@ import {
     getFileEncryptedData,
     decryptAESKeyWithRSA,
     decryptFileRaw,
+    validateMatchingKeys,
 } from '../utils/crypto';
 import SharePanel from '../components/SharePanel';
 import { getCookie } from '../utils/csrf';
 
 function DashboardPage() {
     const [hasPublicKey, setHasPublicKey] = useState(false);
+    const [importKeyText, setImportKeyText] = useState('');
     const [warning, setWarning] = useState(null);
     const [selectedFile, setSelectedFile] = useState(null);
     const [showPrivateKey, setShowPrivateKey] = useState(false);
@@ -83,6 +85,30 @@ function DashboardPage() {
             setWarning('Failed to generate RSA key pair.');
         }
     };
+
+    // Import RSA private key
+    const handleImportPrivateKey = async (e) => {
+        e.preventDefault();
+        const key = importKeyText.trim();
+        if (!key) {
+            setWarning('Paste a key first');
+            return;
+        }
+
+        try {
+            const isKeyValid = await validateMatchingKeys(key);
+            if (!isKeyValid) {
+                setWarning('The key does not match the server public key');
+                return;
+            }
+
+            localStorage.setItem('privateKey', key);
+            setWarning('Successfully imported private key');
+        } catch (err) {
+            console.error(err);
+            setWarning('Import failed');
+        }
+    }
 
     // Capture the selected file from an <input type="file">
     const handleFileChange = (e) => {
@@ -182,6 +208,26 @@ function DashboardPage() {
                 <button className="btn btn-secondary" onClick={handleGenerateRSA}>
                     Generate new RSA key pair
                 </button>
+            </div>
+
+            <hr />
+
+            <div className="card mb-4">
+                <div className="card-header">Import existing private key</div>
+                <div className="card-body">
+                    <form onSubmit={handleImportPrivateKey}>
+                    <textarea
+                        className="form-control"
+                        rows="4"
+                        placeholder="Paste your base64 PKCS#8 key here"
+                        value={importKeyText}
+                        onChange={(e) => setImportKeyText(e.target.value)}
+                    />
+                    <button className="btn btn-outline-primary mt-2" type="submit">
+                        Import key
+                    </button>
+                    </form>
+                </div>
             </div>
 
             <hr />

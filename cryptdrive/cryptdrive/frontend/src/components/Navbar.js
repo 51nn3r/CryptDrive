@@ -7,6 +7,7 @@ const Navbar = () => {
 
     const handleLogout = () => {
         localStorage.removeItem('user');
+        localStorage.removeItem('privateKey');
         navigate('/login');
     };
 
@@ -31,10 +32,10 @@ const Navbar = () => {
                         ) : (
                             <>
                                 <li className="nav-item">
-                                    <Link className="nav-link" to="/login">Prihlásenie</Link>
+                                    <Link className="nav-link" to="/login">Login</Link>
                                 </li>
                                 <li className="nav-item">
-                                    <Link className="nav-link" to="/register">Registrácia</Link>
+                                    <Link className="nav-link" to="/register">Register</Link>
                                 </li>
                             </>
                         )}
