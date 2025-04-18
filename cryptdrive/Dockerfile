@@ -1,3 +1,10 @@
+FROM node:18-alpine AS frontend
+WORKDIR /app/frontend
+COPY cryptdrive/frontend/package*.json ./
+RUN npm ci
+COPY cryptdrive/frontend ./
+RUN npm run build
+
 FROM python:3.12-slim
 ENV PYTHONUNBUFFERED=1
 
@@ -6,13 +13,14 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /cryptdrive
-COPY requirements.txt /cryptdrive/
+WORKDIR /app
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-COPY . /cryptdrive
 
-RUN python cryptdrive/manage.py collectstatic --noinput
+COPY cryptdrive/ .
+
+COPY --from=frontend /app/frontend/build /app/frontend/build
+
+RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
-
-# CMD ["python", "cryptdrive/manage.py", "runserver", "0.0.0.0:8000"]
