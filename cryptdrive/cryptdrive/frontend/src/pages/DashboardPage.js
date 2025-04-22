@@ -127,6 +127,12 @@ function DashboardPage() {
             return;
         }
 
+        const MAX_SIZE = 5 * 8 * 1024 * 1024; // 5 MB
+        if (selectedFile.size > MAX_SIZE) {
+            setWarning('The file size must not exceed 5 MB.');
+            return;
+        }
+
         // Ensure we have a private key locally
         const privateKeyBase64 = localStorage.getItem('privateKey');
         if (!privateKeyBase64) {

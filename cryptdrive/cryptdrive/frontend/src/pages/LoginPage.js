@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCookie } from '../utils/csrf';
 
-function LoginPage() {
+function LoginPage({ onLogin }) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
@@ -25,6 +25,7 @@ function LoginPage() {
             const data = await response.json();
             if (response.ok) {
                 localStorage.setItem('user', JSON.stringify(data));
+                onLogin(data.username);
                 navigate('/dashboard');
             } else {
                 setError(data.error);

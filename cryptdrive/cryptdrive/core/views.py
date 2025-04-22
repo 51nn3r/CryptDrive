@@ -73,10 +73,16 @@ class RegisterView(APIView):
 
 class LoginView(APIView):
     def get(self, request):
-        return Response({
-            "detail": "Login endpoint. Use POST with {username, password}"
-        }, status=status.HTTP_200_OK)
-
+        user = request.user
+        if user and user.is_authenticated:
+            return Response(
+                {"username": user.username, "detail": "User is already logged in."},
+                status=status.HTTP_200_OK
+            )
+        return Response(
+            {"detail": "Login endpoint. Use POST with {username, password}."},
+            status=status.HTTP_200_OK
+        )
     def post(self, request):
         serializer = UserLoginSerializer(data=request.data)
         if not serializer.is_valid():
@@ -96,7 +102,7 @@ class LoginView(APIView):
 class LogoutView(APIView):
     def get(self, request, *args, **kwargs):
         logout(request)
-        return redirect('core:login')
+        return Response({"msg": "Logged out"}, status=status.HTTP_200_OK)
 
 
 class UploadPublicKeyView(APIView):

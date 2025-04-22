@@ -1,13 +1,26 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-const Navbar = () => {
-    const user = JSON.parse(localStorage.getItem('user'));
+
+function Navbar({ onLogout }) {
     const navigate = useNavigate();
 
+    let user = null;
+    try {
+        user = JSON.parse(localStorage.getItem('user'));
+    } catch (e) {
+        user = null;
+    }
+
     const handleLogout = () => {
+        const response = fetch('/core/logout/', {
+            method: 'GET',
+            credentials: 'include',
+        });
+
         localStorage.removeItem('user');
         localStorage.removeItem('privateKey');
+        onLogout(null);
         navigate('/login');
     };
 
@@ -24,9 +37,9 @@ const Navbar = () => {
                                     {user.username}
                                 </a>
                                 <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                    <li><Link className="dropdown-item" to="/settings">Nastavenia</Link></li>
+                                    <li><Link className="dropdown-item" to="/settings">Settings</Link></li>
                                     <li><hr className="dropdown-divider" /></li>
-                                    <li><button className="dropdown-item" onClick={handleLogout}>Odhlásiť</button></li>
+                                    <li><button className="dropdown-item" onClick={handleLogout}>Log out</button></li>
                                 </ul>
                             </li>
                         ) : (
