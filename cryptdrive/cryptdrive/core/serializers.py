@@ -5,7 +5,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.utils.text import get_valid_filename
 
-from .models import File
+from .models import File, Group
 
 User = get_user_model()
 
@@ -85,3 +85,9 @@ class ShareFileSerializer(serializers.Serializer):
     file_id = serializers.IntegerField()
     recipient_id = serializers.IntegerField()
     encrypted_sym_key = serializers.CharField()
+
+
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
+        fields = ['id', 'name', 'created']

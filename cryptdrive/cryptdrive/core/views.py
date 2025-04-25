@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from django.core.serializers import serialize
 from django.db import transaction
 from django.http import JsonResponse, FileResponse
 from django.shortcuts import redirect, get_object_or_404
@@ -8,18 +9,19 @@ from django.views.generic import TemplateView
 from django.contrib.auth import get_user_model, authenticate, login, logout
 from django.conf import settings
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.status import HTTP_200_OK
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 
-from .models import File, SharedKey
+from .models import File, SharedKey, Group
 from .serializers import (
     UserRegisterSerializer,
     UserLoginSerializer,
     EncryptedFileUploadSerializer,
     FileListSerializer,
     UserListSerializer,
-    ShareFileSerializer,
+    ShareFileSerializer, GroupSerializer,
 )
 from .services import (
     save_public_key,
@@ -83,6 +85,7 @@ class LoginView(APIView):
             {"detail": "Login endpoint. Use POST with {username, password}."},
             status=status.HTTP_200_OK
         )
+
     def post(self, request):
         serializer = UserLoginSerializer(data=request.data)
         if not serializer.is_valid():
@@ -276,3 +279,39 @@ class ShareFileView(APIView):
             'msg': 'File shared successfully',
             'shared_key_id': shared_key_obj.id
         })
+
+
+class GroupView(APIView):
+    http_method_names = ['get', 'post', 'patch', 'delete']
+
+    def get(self, request, id=None):
+        if id is None:
+            groups = Group.objects.filter(owner=request.user)
+            serializer = GroupSerializer(groups, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        group = get_object_or_404(Group, pk=id, owner=request.user)
+        serializer = GroupSerializer(group)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, id=None):
+        serializer = GroupSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(owner=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, id=None):
+        group = get_object_or_404(Group, pk=id, owner=request.user)
+        ser = GroupSerializer(group, data=request.data, partial=True)
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data, status=status.HTTP_200_OK)
+
+        return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, id=None):
+        group = get_object_or_404(Group, pk=id, owner=request.user)
+        group.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

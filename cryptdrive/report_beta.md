@@ -1,34 +1,44 @@
 # Info o projekte:
-- Meno a priezvisko: 
-- Názov projektu: 
+
+- Meno a priezvisko: Aleksandr Bukhtoiarov
+- Názov projektu: CryptDrive
 - Link na repozitár:                  https://github.com/51nn3r/CryptDrive
 - Link na verejnú inštanciu projektu: https://v2202504266162330836.goodsrv.de/login
 
 # Info o reportovanej verzii:
-- Tag: beta    <!-- Uviesť beta_cisloSubverzie, ak ste robili v bete zmeny pred termínom odovzdania -->
 
-# Info k testovaniu:     
-- для тестирования можно спойкой создать нового(вых) пользователя(лей).
-- после первого входа в систему необходимо создать пару rsa ключей. без этого невозможно будет ни загружать файлы, ни поделиться ими с вами.
-- при нажатии на "Generate new RSA key pair" будет сгенерирована пара rsa ключей в выведен приватный. приватный ключ необходимо вводит при каждом входе в систему
-- пользователи имеюще rsa ключи могут отправлять файлы на сервер делиться ими с другими пользователями.
-- загруженные файлы может удалить только их владелец - тот кто их загрузил.
-- делиться файлом может каждый кто к нему имеет доступ (не только владелец).
+- Tag: beta1
 
-# Postup, ako rozbehať vývojové prostredie 
-- используется docker-compose.
-- однако перед запуском docker необходимо собрать frontend нужно перейти в директорию forntend и npm run build
-- или же просто запустить prerare-project.sh
+# Info k testovaniu:
+
+- na testovanie môžete pokojne vytvoriť nového(-ých) používateľa(-ľov).
+- po prvom prihlásení je potrebné vygenerovať pár RSA kľúčov – bez toho nebude možné nahrávať súbory ani ich zdieľať.
+- po kliknutí na "Generate new RSA key pair" sa vygeneruje pár RSA kľúčov a zobrazí sa privátny. Tento privátny kľúč je
+  potrebné zadávať pri každom prihlásení do systému.
+- používatelia, ktorí majú RSA kľúč, môžu nahrávať súbory na server a zdieľať ich s inými používateľmi.
+- nahraté súbory môže odstrániť iba ich vlastník – ten, kto ich nahral.
+- zdieľať súbor môže každý, kto k nemu má prístup (nielen vlastník).
+
+# Postup, ako rozbehať vývojové prostredie
+
+- používa sa docker-compose.
+- pred spustením dockeru je však potrebné zostaviť frontend – treba prejsť do adresára frontend a spustiť npm run build.
+- prípadne môže byť jednoduchšie spustiť aplikáciu lokálne pomocou manage.py – je potrebný Python 3.12 a všetky knižnice
+  zo requirements.txt.
 
 # Stav implementácie:
-- на данный момент отсутствует кастомная админка сайта - будет добавлена в ближайшее время
-- не реализовано разделение пользователей на группы
-- отсутствует функционал для изменения файлов - пока что их можно лищь зашружать и удалять.
+
+- momentálne chýba vlastná administračná časť webu – bude doplnená v najbližšom čase.
+- nie je implementované rozdelenie používateľov do skupín.
+- chýba funkcionalita na úpravu súborov – zatiaľ je možné ich len nahrávať a mazať.
 
 # Časový plán:
-- 9 неделя (до 27.04): закончу работу с разделением пользователей на группы. постораюсь закончить админку.
-- 10 неделя (до 04.05): реализована админка, исправления по review, если будут найдены ошибки.
+
+- 9 týždeň (do 27.04): dokončím prácu na rozdelení používateľov do skupín, pokúsim sa dokončiť administráciu.
+- 10 týždeň (do 04.05): implementácia administrácie a opravy podľa pripomienok z review, ak sa nájdu chyby.
 
 # Problémy:
-- запуск в dokcer - не получилось настроить так чтобы frontend собирался сам - так что приходится его собирать отдельно перед запуском docker
-- ограничение по размеру загружаемого файла до 10Mb
+
+- spustenie v dockeri – nepodarilo sa nastaviť automatické zostavenie frontendu, preto ho treba pred spustením dockeru
+  zostaviť manuálne.
+- obmedzenie veľkosti nahrávaného súboru na 10 MB.

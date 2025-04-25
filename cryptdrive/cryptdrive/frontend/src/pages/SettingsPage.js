@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
+import GroupPanel from '../components/GroupPanel';
+
 function SettingsPage() {
     const [username, setUsername] = useState('');
     const [message, setMessage] = useState('');
@@ -25,8 +27,8 @@ function SettingsPage() {
     };
 
     return (
-        <div>
-            <h2>Here will be the settings...</h2>
+        <div class="container mt-5">
+            <GroupPanel />
         </div>
     );
 }

@@ -12,6 +12,7 @@ from .views import (
     UsersListView,
     ShareFileView,
     ManageFileView,
+    GroupView,
 )
 
 app_name = 'core'
@@ -33,5 +34,6 @@ urlpatterns = [
     path('list-users/', UsersListView.as_view(), name='list-users-default'),
     path('list-users/<str:search>', UsersListView.as_view(), name='list-users'),
     path('share-file/', ShareFileView.as_view(), name='file-share'),
-    path('manage-file/<int:file_id>', ManageFileView.as_view(), name='file-manage'),
+    path('groups/', GroupView.as_view(), name='group-manage-default'),
+    path('groups/<int:id>', GroupView.as_view(), name='group-manage'),
 ]
