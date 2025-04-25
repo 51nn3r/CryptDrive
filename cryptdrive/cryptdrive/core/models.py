@@ -35,6 +35,11 @@ class SharedKey(models.Model):
 class Group(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_groups')
     name = models.CharField(max_length=255)
+    members = models.ManyToManyField(
+        User,
+        related_name='member_groups',
+        blank=True
+    )
     created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

@@ -32,7 +32,7 @@ function App() {
             .catch(err => {
                 console.error('Fetch error:', err);
             })
-            .finally(() => setChecking(false));;
+            .finally(() => setChecking(false));
     }, []);
 
     if (checking) return null;

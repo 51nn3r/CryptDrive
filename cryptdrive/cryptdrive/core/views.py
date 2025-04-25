@@ -282,7 +282,7 @@ class ShareFileView(APIView):
 
 
 class GroupView(APIView):
-    http_method_names = ['get', 'post', 'patch', 'delete']
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
 
     def get(self, request, id=None):
         if id is None:
@@ -292,6 +292,7 @@ class GroupView(APIView):
 
         group = get_object_or_404(Group, pk=id, owner=request.user)
         serializer = GroupSerializer(group)
+        
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, id=None):
@@ -315,3 +316,21 @@ class GroupView(APIView):
         group = get_object_or_404(Group, pk=id, owner=request.user)
         group.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class GroupMemberView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    def post(self, request, id, user_id):
+        group = get_object_or_404(Group, pk=id, owner=request.user)
+        user = get_object_or_404(User, id=user_id)
+        group.members.add(user)
+
+        return Response({'detail': f'{user.username} added'}, status=status.HTTP_200_OK)
+
+    def delete(self, request, id, user_id):
+        group = get_object_or_404(Group, pk=id, owner=request.user)
+        user = get_object_or_404(User, id=user_id)
+        group.members.remove(user)
+
+        return Response({'detail': f'{user.username} removed'}, status=status.HTTP_200_OK)

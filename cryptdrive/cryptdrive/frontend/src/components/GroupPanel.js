@@ -18,6 +18,7 @@ import {
     fetchUsers,
     shareFile,
 } from '../utils/crypto';
+import MemberSelector from './MemberSelector'
 import { getCookie } from '../utils/csrf';
 
 
@@ -26,6 +27,8 @@ function GroupPanel() {
     const [newGroupName, setNewGroupName] = useState('');
     const [editingId, setEditingId] = useState(null);
     const [editingName, setEditingName] = useState('');
+    const [newMember, setNewMember] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
     const [msg, setMsg] = useState(null);
 
     const csrf = getCookie('csrftoken');
@@ -40,7 +43,7 @@ function GroupPanel() {
     const createGroup = async (e) => {
         e.preventDefault();
         if (!newGroupName.trim()) return;
-        const res = await fetch('/core/groups', {
+        const res = await fetch('/core/groups/', {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
@@ -88,6 +91,39 @@ function GroupPanel() {
         }
     };
 
+    const addMember = async (g) => {
+        if (!newMember) return;
+
+        const res = await fetch(`/core/groups/${g.id}/members/${newMember.id}`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf,
+            }
+        });
+        if (res.ok) {
+            setNewMember(null);
+            await fetchGroups();
+            setMsg(`Added "${newMember.username}" into "${g.name}"`);
+        }
+    }
+
+    const removeMember = async (g, u) => {
+        const res = await fetch(`/core/groups/${g.id}/members/${u.id}`, {
+            method: 'DELETE',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf,
+            },
+        });
+        if (res.ok) {
+            await fetchGroups();
+            setMsg(`User "${u.username}" removed.`);
+        }
+    };
+
     return (
         <div className="container mt-5">
             <h3>Your groups</h3>
@@ -119,6 +155,37 @@ function GroupPanel() {
                                 </div>
                             </>
                         )}
+
+                        <div className="mt-3">
+                            <em>Members:</em>
+                            {g.members.length ? (
+                                <ul className="list-inline">
+                                    {g.members.map(u => (
+                                        <li key={u.id} className="list-inline-item me-3">
+                                            {u.username}
+                                            <button
+                                                className="btn btn-link btn-sm text-danger p-0 ms-1"
+                                                onClick={() => removeMember(g, u)}
+                                            >
+                                                &times;
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <div className="text-muted">No members yet.</div>
+                            )}
+                        </div>
+
+                        <MemberSelector
+                            groupId={g.id}
+                            onSelect={(u) => {
+                                setNewMember(u);
+                            }}
+                        />
+                        {newMember ? (
+                            <><button className="btn btn-sm btn-success me-1" onClick={() => addMember(g)}>Add</button></>
+                        ) : (<></>)}
                     </li>
                 ))}
             </ul>

@@ -13,6 +13,7 @@ from .views import (
     ShareFileView,
     ManageFileView,
     GroupView,
+    GroupMemberView,
 )
 
 app_name = 'core'
@@ -36,4 +37,5 @@ urlpatterns = [
     path('share-file/', ShareFileView.as_view(), name='file-share'),
     path('groups/', GroupView.as_view(), name='group-manage-default'),
     path('groups/<int:id>', GroupView.as_view(), name='group-manage'),
+    path('groups/<int:id>/members/<int:user_id>', GroupMemberView.as_view(), name='group-members-manage'),
 ]

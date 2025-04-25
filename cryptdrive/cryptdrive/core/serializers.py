@@ -88,6 +88,13 @@ class ShareFileSerializer(serializers.Serializer):
 
 
 class GroupSerializer(serializers.ModelSerializer):
+    members = serializers.SerializerMethodField()
+
     class Meta:
         model = Group
-        fields = ['id', 'name', 'created']
+        fields = ['id', 'name', 'created', 'members']
+
+    def get_members(self, obj):
+        return list(
+            obj.members.values('id', 'username')
+        )
