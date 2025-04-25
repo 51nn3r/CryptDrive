@@ -11,6 +11,7 @@ import Footer from './components/Footer';
 
 function App() {
     const [user, setUser] = useState(null);
+    const [checking, setChecking] = useState(true);
 
     useEffect(() => {
         fetch('/core/login/', {
@@ -30,8 +31,11 @@ function App() {
             })
             .catch(err => {
                 console.error('Fetch error:', err);
-            });
+            })
+            .finally(() => setChecking(false));;
     }, []);
+
+    if (checking) return null;
 
     return (
         <Router>
