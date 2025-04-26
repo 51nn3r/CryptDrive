@@ -17,8 +17,10 @@ import {
     decryptFileRaw,
     fetchUsers,
     shareFile,
+    encryptKeysForUsers,
 } from '../utils/crypto';
 import MemberSelector from './MemberSelector'
+import FileSelector from './FileSelector'
 import { getCookie } from '../utils/csrf';
 
 
@@ -103,6 +105,18 @@ function GroupPanel() {
             }
         });
         if (res.ok) {
+            const data = await res.json();
+            const { missing_files: missingFiles = [] } = data;
+
+            if (missingFiles && missingFiles.length > 0) {
+                setMsg(`Granting access to ${missingFiles.length} files to "${newMember.username}"...`);
+
+                await encryptKeysForUsers([{
+                    id: newMember.id,
+                    missingFiles: missingFiles.map(file => file.id)
+                }]);
+            }
+
             setNewMember(null);
             await fetchGroups();
             setMsg(`Added "${newMember.username}" into "${g.name}"`);
@@ -186,6 +200,14 @@ function GroupPanel() {
                         {newMember ? (
                             <><button className="btn btn-sm btn-success me-1" onClick={() => addMember(g)}>Add</button></>
                         ) : (<></>)}
+
+                        <FileSelector
+                            groupId={g.id}
+                            existingFileIds={g.files.map(f => f.id)}
+                            onChange={newIds => {
+                              fetchGroups();
+                            }}
+                        />
                     </li>
                 ))}
             </ul>

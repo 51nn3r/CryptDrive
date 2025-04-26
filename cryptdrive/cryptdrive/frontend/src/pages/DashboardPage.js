@@ -17,7 +17,6 @@ import {
     decryptFileRaw,
     validateMatchingKeys,
 } from '../utils/crypto';
-import SharePanel from '../components/SharePanel';
 import { getCookie } from '../utils/csrf';
 import { deleteFile } from '../utils/helpers';
 
@@ -257,9 +256,6 @@ function DashboardPage() {
                             <button className="btn btn-sm btn-outline-secondary" onClick={() => toggleShare(file.id)}>
                                 Share
                             </button>
-                            {selectedShareFileId === file.id && (
-                                <SharePanel fileId={file.id} onClose={() => setSelectedShareFileId(null)} />
-                            )}
 
                             <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(file.id)}>
                                 Delete

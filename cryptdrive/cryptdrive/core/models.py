@@ -38,9 +38,27 @@ class Group(models.Model):
     members = models.ManyToManyField(
         User,
         related_name='member_groups',
-        blank=True
+        blank=True,
+    )
+    files = models.ManyToManyField(
+        File,
+        through='GroupFileShare',
+        related_name='shared_to_groups',
+        blank=True,
     )
     created = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = ('owner', 'name')
+        ordering = ['-created']
+
     def __str__(self):
         return f'{self.name} ({self.owner})'
+
+
+class GroupFileShare(models.Model):
+    group = models.ForeignKey(Group, on_delete=models.CASCADE)
+    file = models.ForeignKey(File, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('group', 'file')

@@ -340,7 +340,19 @@ export async function fetchUsers(searchTerm='') {
  * then send it to server:
  * POST /core/share-file/ with { file_id, recipient_id, encrypted_sym_key }
  */
-export async function shareFile(fileId, recipientId, encryptedSymKeyB64) {
+export async function shareFile(fileId, recipientId) {
+    const privateKey = localStorage.getItem('privateKey');
+    if (!privateKey) {
+        throw new Error('No private key found locally.');
+        return;
+    }
+
+    const {filename, iv, encryptedAES} = await getFileCryptoMetadata(fileId);
+    const aesKey = await decryptAESKeyWithRSA(encryptedAES, privateKey);
+    const pubKeyBase64 = await getPublicKeyFromServer(recipientId);
+
+    const encryptedSymKeyB64 = await encryptAESKeyWithRSA(aesKey, pubKeyBase64);
+
     const response = await fetch('/core/share-file/', {
         method: 'POST',
         headers: {
@@ -358,6 +370,14 @@ export async function shareFile(fileId, recipientId, encryptedSymKeyB64) {
         throw new Error(`Failed to share file (${response.status}): ` + JSON.stringify(await response.json()));
     }
     return await response.json(); // { msg: 'File shared successfully', shared_key_id: ... }
+}
+
+export async function encryptKeysForUsers(usersMissingFiles) {
+    for (const user of usersMissingFiles) {
+        for (const fileId of user.missingFiles) {
+            await shareFile(fileId, user.id);
+        }
+    }
 }
 
 /*  Helpers for base64 <-> ArrayBuffer  */

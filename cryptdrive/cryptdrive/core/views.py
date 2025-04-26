@@ -32,6 +32,13 @@ from .services import (
 )
 from .permissions import IsOwner
 
+from .utils import (
+    get_accessible_files,
+    get_user_decryptable_files,
+    get_users_should_have_keys_for_file,
+    get_users_with_access_to_file,
+)
+
 User = get_user_model()
 
 
@@ -292,7 +299,7 @@ class GroupView(APIView):
 
         group = get_object_or_404(Group, pk=id, owner=request.user)
         serializer = GroupSerializer(group)
-        
+
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, id=None):
@@ -312,9 +319,21 @@ class GroupView(APIView):
 
         return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @transaction.atomic
     def delete(self, request, id=None):
         group = get_object_or_404(Group, pk=id, owner=request.user)
+        members = list(group.members.all())
         group.delete()
+
+        for user in members:
+            files_have_access_to = get_user_decryptable_files(user)
+            files_should_have_access_to = get_accessible_files(user)
+            files_diff = set(files_have_access_to) - set(files_should_have_access_to)
+            SharedKey.objects.filter(
+                recipient=user,
+                file__in=files_diff
+            ).delete()
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -326,11 +345,67 @@ class GroupMemberView(APIView):
         user = get_object_or_404(User, id=user_id)
         group.members.add(user)
 
-        return Response({'detail': f'{user.username} added'}, status=status.HTTP_200_OK)
+        files_have_access_to = get_user_decryptable_files(user)
+        files_should_have_access_to = get_accessible_files(user)
+        files_diff = list(set(files_should_have_access_to) - set(files_have_access_to))
+
+        return Response({
+            'detail': f'{user.username} added',
+            'missing_files': FileListSerializer(files_diff, many=True).data,
+        }, status=status.HTTP_200_OK)
 
     def delete(self, request, id, user_id):
         group = get_object_or_404(Group, pk=id, owner=request.user)
         user = get_object_or_404(User, id=user_id)
         group.members.remove(user)
 
-        return Response({'detail': f'{user.username} removed'}, status=status.HTTP_200_OK)
+        files_have_access_to = get_user_decryptable_files(user)
+        files_should_have_access_to = get_accessible_files(user)
+        files_diff = set(files_have_access_to) - set(files_should_have_access_to)
+        SharedKey.objects.filter(
+            recipient=user,
+            file__in=files_diff
+        ).delete()
+
+        return Response({
+            'detail': f'{user.username} removed',
+            'extra_files': FileListSerializer(list(files_diff), many=True).data,
+        }, status=status.HTTP_200_OK)
+
+
+class GroupFileView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    @transaction.atomic
+    def post(self, request, id, file_id):
+        group = get_object_or_404(Group, pk=id, owner=request.user)
+        file = get_object_or_404(File, pk=file_id)
+        group.files.add(file)
+
+        users_have_access_to_file = get_users_should_have_keys_for_file(file)
+        users_should_have_access_to_file = get_users_with_access_to_file(file)
+        users_diff = list(set(users_have_access_to_file) - set(users_should_have_access_to_file))
+
+        return Response({
+            'detail': f'{file.filename} added',
+            'missing_users': UserListSerializer(users_diff, many=True).data,
+        }, status=status.HTTP_200_OK)
+
+    @transaction.atomic
+    def delete(self, request, id, file_id):
+        group = get_object_or_404(Group, pk=id, owner=request.user)
+        file = get_object_or_404(File, id=file_id)
+        group.files.remove(file)
+
+        users_have_access_to_file = get_users_should_have_keys_for_file(file)
+        users_should_have_access_to_file = get_users_with_access_to_file(file)
+        users_diff = list(set(users_should_have_access_to_file) - set(users_have_access_to_file))
+
+        for extra_user in users_diff:
+            key = get_object_or_404(SharedKey, file=file, recipient=extra_user)
+            key.delete()
+
+        return Response({
+            'detail': f'{file.filename} added',
+            'extra_users': UserListSerializer(users_diff, many=True).data,
+        }, status=status.HTTP_200_OK)

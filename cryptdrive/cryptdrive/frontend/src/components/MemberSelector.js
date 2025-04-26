@@ -51,7 +51,7 @@ function MemberSelector({ groupId, onSelect }) {
                         style={{ cursor: 'pointer' }}
                     >
                         {u.username}
-                        {selectedUser?.id === u.id && <span>✓</span>}
+                        {selectedUser?.id === u.id && <span>&#10004;</span>}
                     </li>
                 )}
             </ul>
