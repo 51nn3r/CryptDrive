@@ -253,9 +253,6 @@ function DashboardPage() {
                     {files.map(file => (
                         <li key={file.id} className="list-group-item d-flex justify-content-between align-items-center">
                             {file.filename}
-                            <button className="btn btn-sm btn-outline-secondary" onClick={() => toggleShare(file.id)}>
-                                Share
-                            </button>
 
                             <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(file.id)}>
                                 Delete
