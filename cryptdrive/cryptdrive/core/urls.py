@@ -31,6 +31,7 @@ urlpatterns = [
     path('get-public-key/<int:user_id>', GetPublicKeyView.as_view(), name='get-pubkey'),
     path('upload-encrypted/', UploadEncryptedFileView.as_view(), name='upload-encrypted'),
     path('files/', UserFileListView.as_view(), name='file-list'),
+    path('manage-file/<int:file_id>', ManageFileView.as_view(), name='file-manage'),
     path('download/<int:file_id>/meta/', FileMetaView.as_view(), name='file-meta-download'),
     path('download/<int:file_id>/data/', FileEncryptedDataView.as_view(), name='file-data-download'),
     path('list-users/', UsersListView.as_view(), name='list-users-default'),
