@@ -28,6 +28,11 @@ function Navbar({ onLogout }) {
         <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
             <div className="container">
                 <Link className="navbar-brand" to="/">CryptDrive</Link>
+
+                {user?.is_superuser ? (
+                    <Link className="navbar-brand" to="/adminpanel/">Admin panel</Link>
+                ) : null}
+
                 <div className="collapse navbar-collapse justify-content-end">
                     <ul className="navbar-nav">
                         {user ? (

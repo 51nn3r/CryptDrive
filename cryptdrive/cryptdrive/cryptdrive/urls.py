@@ -21,7 +21,7 @@ from core.views import ReactBaseView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # path('adminpanel/', include('adminpanel.urls')),
+    path('adminpanel/', include('adminpanel.urls')),
     path('core/', include('core.urls')),
     path('api/', include('api.urls')),
 
