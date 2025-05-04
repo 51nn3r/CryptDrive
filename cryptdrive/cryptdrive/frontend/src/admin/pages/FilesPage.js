@@ -8,20 +8,22 @@ export default function FilesPage() {
 
     const load = async () => {
         try {
-            const data = await apiFetch('/adminpanel/files/');
+            const data = await apiFetch('files/');
             setFiles(data);
         } catch (err) {
             setMsg(err.message);
         }
     };
 
-    useEffect(() => { load(); }, []);
+    useEffect(() => {
+        load();
+    }, []);
 
     const columns = [
         { key: 'id', label: 'ID' },
-        { key: 'filename', label: 'Filename' },
-        { key: 'owner', label: 'Owner-ID' },
-        { key: 'size', label: 'Size' },
+        { key: 'name', label: 'Filename' },
+        { key: 'owner', label: 'Owner ID' },
+        { key: 'size', label: 'Size (bytes)' },
         { key: 'created_at', label: 'Uploaded' },
     ];
 

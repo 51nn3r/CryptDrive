@@ -20,6 +20,20 @@ class UserAdminViewSet(viewsets.ModelViewSet):
     serializer_class = UserAdminSerializer
     permission_classes = [permissions.IsAuthenticated, IsSuperuser]
 
+    def perform_create(self, serializer):
+        password = serializer.validated_data.pop('password', None)
+        user = serializer.save()
+        if password:
+            user.set_password(password)
+            user.save()
+
+    def perform_update(self, serializer):
+        password = serializer.validated_data.pop('password', None)
+        user = serializer.save()
+        if password:
+            user.set_password(password)
+            user.save()
+
 
 class GroupAdminViewSet(viewsets.ModelViewSet):
     queryset = Group.objects.all().order_by('-created')
