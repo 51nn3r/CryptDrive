@@ -104,7 +104,7 @@ class LoginView(APIView):
 
         if user:
             login(request, user)
-            return Response({"msg": "Login successful", "username": user.username}, status=200)
+            return Response({"id": user.id, "msg": "Login successful", "username": user.username}, status=200)
 
         return Response({"error": "Invalid credentials"}, status=401)
 
