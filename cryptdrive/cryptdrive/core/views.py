@@ -85,7 +85,7 @@ class LoginView(APIView):
         user = request.user
         if user and user.is_authenticated:
             return Response(
-                {"username": user.username, 'is_superuser': user.is_superuser, "detail": "User is already logged in."},
+                {"id": user.id, "username": user.username, "is_superuser": user.is_superuser, "detail": "User is already logged in."},
                 status=status.HTTP_200_OK
             )
         return Response(

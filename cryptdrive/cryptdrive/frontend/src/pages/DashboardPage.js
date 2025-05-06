@@ -51,14 +51,22 @@ function DashboardPage() {
     }, [user]);
 
     // Loading a list of files (only if the public key already exists)
-    useEffect(() => {
+
+    const loadFiles = async () => {
         if (hasPublicKey) {
-            fetch('/core/files/')
-                .then(res => res.json())
-                .then(data => setFiles(data))
-                .catch(err => console.error('Failed to load files:', err));
+            try {
+                const res = await fetch('/core/files/');
+                const data = await res.json();
+                setFiles(data);
+            } catch (err) {
+                console.error('Failed to load files:', err);
+            }
         }
-    }, [hasPublicKey]);
+    };
+
+    useEffect(() => {
+        loadFiles();
+    }, [hasPublicKey])
 
     // Generates a new RSA key pair (client-side)
     const handleGenerateRSA = async () => {
@@ -156,6 +164,8 @@ function DashboardPage() {
             await uploadFileWithAESKey(selectedFile.name, new Blob([encryptedFile]), bufferToBase64(iv), encryptedAESB64);
 
             setWarning('File encrypted and uploaded successfully!');
+
+            await loadFiles();
         } catch (err) {
             console.error(err);
             setWarning('An error occurred during encryption or upload.');
@@ -214,6 +224,9 @@ function DashboardPage() {
     };
     if (!user) return null;
 
+    const ownFiles = files.filter(f => f.owner === user.id);
+    const sharedFiles = files.filter(f => f.owner !== user.id);
+
     return (
         <div className="container mt-5">
             <h3>Welcome, {user.username}!</h3>
@@ -248,23 +261,49 @@ function DashboardPage() {
 
             <hr />
 
-            <div className="container mt-5">
-                <ul className="list-group">
-                    {files.map(file => (
-                        <li key={file.id} className="list-group-item d-flex justify-content-between align-items-center">
-                            {file.filename}
-
-                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(file.id)}>
-                                Delete
-                            </button>
-
-                            <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownload(file.id)}>
+            <h4>Your files</h4>
+            <ul className="list-group mb-4">
+                {ownFiles.length > 0 ? ownFiles.map(file => (
+                    <li key={file.id}
+                            className="list-group-item d-flex justify-content-between align-items-center">
+                        {file.filename}
+                        <div>
+                            <button
+                                className="btn btn-sm btn-outline-primary me-2"
+                                onClick={() => handleDownload(file.id)}
+                            >
                                 Download
                             </button>
-                        </li>
-                    ))}
-                </ul>
-            </div>
+                            <button
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => handleDelete(file.id)}
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </li>
+                )) : (
+                    <li className="list-group-item">No files uploaded yet.</li>
+                )}
+            </ul>
+
+            <h4>Files shared with you</h4>
+            <ul className="list-group">
+                {sharedFiles.length > 0 ? sharedFiles.map(file => (
+                    <li key={file.id}
+                            className="list-group-item d-flex justify-content-between align-items-center">
+                        {file.filename}
+                        <button
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => handleDownload(file.id)}
+                        >
+                            Download
+                        </button>
+                    </li>
+                )) : (
+                    <li className="list-group-item">No files shared with you.</li>
+                )}
+            </ul>
 
             <hr />
 

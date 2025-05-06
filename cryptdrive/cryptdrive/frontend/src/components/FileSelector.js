@@ -10,6 +10,8 @@ function FileSelector({ groupId, existingFileIds = [], onChange }) {
     const [statusMsg, setStatusMsg] = useState('');
     const csrf = getCookie('csrftoken');
 
+    const user = JSON.parse(localStorage.getItem('user'));
+
     useEffect(() => {
         async function fetchFiles() {
             const res = await fetch('/core/files/', {
@@ -24,7 +26,7 @@ function FileSelector({ groupId, existingFileIds = [], onChange }) {
         fetchFiles();
     }, []);
 
-    const filtered = allFiles.filter(f =>
+    const filtered = allFiles.filter(f => f.owner === user.id).filter(f =>
         f.filename.toLowerCase().includes(filterTerm.toLowerCase())
     );
 

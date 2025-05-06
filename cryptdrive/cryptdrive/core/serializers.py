@@ -72,7 +72,7 @@ class EncryptedFileUploadSerializer(serializers.Serializer):
 class FileListSerializer(serializers.ModelSerializer):
     class Meta:
         model = File
-        fields = ['id', 'filename', 'created_at']
+        fields = ['id', 'filename', 'owner', 'created_at']
 
 
 class UserListSerializer(serializers.ModelSerializer):

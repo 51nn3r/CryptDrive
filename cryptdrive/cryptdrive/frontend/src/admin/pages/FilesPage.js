@@ -21,7 +21,7 @@ export default function FilesPage() {
 
     const columns = [
         { key: 'id', label: 'ID' },
-        { key: 'name', label: 'Filename' },
+        { key: 'filename', label: 'Filename' },
         { key: 'owner', label: 'Owner ID' },
         { key: 'size', label: 'Size (bytes)' },
         { key: 'created_at', label: 'Uploaded' },
